@@ -45,9 +45,7 @@ class Asset < Sequel::Model
     end
 
     def fifo_disposal_lots(account:, currency:, amount:, disposed_at:)
-      assets = where(account_id: account.id, currency_id: currency.id).where do
-        (Sequel[:amount] > 0) & (acquired_at <= disposed_at) # rubocop:disable Style/NumericPredicate
-      end.order(:acquired_at, :id)
+      assets = disposable(account.id, currency.id, disposed_at).order(:acquired_at, :id)
 
       find_disposal_lots(assets, amount) do |lot|
         assets.where { acquired_at >= lot.acquired_at }
@@ -55,9 +53,7 @@ class Asset < Sequel::Model
     end
 
     def lifo_disposal_lots(account:, currency:, amount:, disposed_at:)
-      assets = where(account_id: account.id, currency_id: currency.id).where do
-        (Sequel[:amount] > 0) & (acquired_at <= disposed_at) # rubocop:disable Style/NumericPredicate
-      end.reverse(:acquired_at, :id)
+      assets = disposable(account.id, currency.id, disposed_at).reverse(:acquired_at, :id)
 
       find_disposal_lots(assets, amount) do |lot|
         assets.where { acquired_at <= lot.acquired_at }
@@ -65,12 +61,16 @@ class Asset < Sequel::Model
     end
 
     def hifo_disposal_lots(account:, currency:, amount:, disposed_at:)
-      assets = where(account_id: account.id, currency_id: currency.id).where do
-        (Sequel[:amount] > 0) & (acquired_at <= disposed_at) # rubocop:disable Style/NumericPredicate
-      end.order(Sequel.desc(:average_cost_amount), :acquired_at, :id)
+      assets = disposable(account.id, currency.id, disposed_at).order(Sequel.desc(:average_cost_amount), :acquired_at, :id)
 
       find_disposal_lots(assets, amount) do |lot|
         assets.where { average_cost_amount <= lot.average_cost_amount }
+      end
+    end
+
+    def disposable(account_id, currency_id, disposed_at)
+      where(account_id:, currency_id:).where do
+        (Sequel[:amount] > 0) & (acquired_at <= disposed_at) # rubocop:disable Style/NumericPredicate
       end
     end
 
