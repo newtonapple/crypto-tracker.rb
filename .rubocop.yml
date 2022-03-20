@@ -1,0 +1,39 @@
+require:
+  - rubocop-performance
+  - rubocop-sequel
+
+# Metrics Cops
+
+Metrics/ClassLength:
+  Description: 'Avoid classes longer than 250 lines of code.'
+  Max: 250
+  Enabled: true
+
+Metrics/ModuleLength:
+  Description: 'Avoid modules longer than 250 lines of code.'
+  Max: 250
+  Enabled: true
+
+Metrics/ParameterLists:
+  Description: 'Pass no more than four parameters into a method.'
+  Max: 5
+  Enabled: true
+
+Metrics/MethodLength:
+  Description: 'Avoid methods longer than 25 lines of code.'
+  StyleGuide: '<https://github.com/bbatsov/ruby-style-guide#short-methods>'
+  Max: 25
+  Enabled: true
+
+Metrics/BlockLength:
+  CountComments: false
+  Max: 10
+  IgnoredMethods:
+    - Sequel.migration
+    - create_table
+    - change
+    - up
+    - down
+    - context
+    - describe
+    - it
