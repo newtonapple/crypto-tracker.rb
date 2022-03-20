@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 begin
-  require_relative '.env.rb'
+  require_relative '.env'
 rescue LoadError
 end
 

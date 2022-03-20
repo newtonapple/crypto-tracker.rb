@@ -46,7 +46,7 @@ class Asset < Sequel::Model
 
     def fifo_disposal_lots(account:, currency:, amount:, disposed_at:)
       assets = where(account_id: account.id, currency_id: currency.id).where do
-        (Sequel[:amount] > 0) & (acquired_at <= disposed_at)
+        (Sequel[:amount] > 0) & (acquired_at <= disposed_at) # rubocop:disable Style/NumericPredicate
       end.order(:acquired_at, :id)
 
       find_disposal_lots(assets, amount) do |lot|
@@ -56,7 +56,7 @@ class Asset < Sequel::Model
 
     def lifo_disposal_lots(account:, currency:, amount:, disposed_at:)
       assets = where(account_id: account.id, currency_id: currency.id).where do
-        (Sequel[:amount] > 0) & (acquired_at <= disposed_at)
+        (Sequel[:amount] > 0) & (acquired_at <= disposed_at) # rubocop:disable Style/NumericPredicate
       end.reverse(:acquired_at, :id)
 
       find_disposal_lots(assets, amount) do |lot|
@@ -66,7 +66,7 @@ class Asset < Sequel::Model
 
     def hifo_disposal_lots(account:, currency:, amount:, disposed_at:)
       assets = where(account_id: account.id, currency_id: currency.id).where do
-        (Sequel[:amount] > 0) & (acquired_at <= disposed_at)
+        (Sequel[:amount] > 0) & (acquired_at <= disposed_at) # rubocop:disable Style/NumericPredicate
       end.order(Sequel.desc(:average_cost_amount), :acquired_at, :id)
 
       find_disposal_lots(assets, amount) do |lot|
@@ -119,7 +119,7 @@ class Asset < Sequel::Model
     currency_col = format("%20.10f #{currency_symbol}", amount)
     cost_currency_symbol = cost_currency.symbol.ljust(symbol_width)
     cost_currency_col = format("%20.10f #{cost_currency_symbol}", cost_amount)
-    avg_currency_symbol = "#{cost_currency.symbol} / #{currency.symbol}".ljust(symbol_width * 2 - 4)
+    avg_currency_symbol = "#{cost_currency.symbol} / #{currency.symbol}".ljust((symbol_width * 2) - 4)
     avg_cost_currency_col = format("%20.10f #{avg_currency_symbol}", average_cost_amount)
 
     output << type_col

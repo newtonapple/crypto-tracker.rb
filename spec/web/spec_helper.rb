@@ -1,6 +1,8 @@
-ENV["RACK_ENV"] = "test"
+# frozen_string_literal: true
+
+ENV['RACK_ENV'] = 'test'
 require_relative '../../app'
-raise "test database doesn't end with test" unless DB.opts[:database] =~ /test\z/
+raise "test database doesn't end with test" unless DB.opts[:database].end_with?('test')
 
 require 'capybara'
 require 'capybara/dsl'
@@ -18,7 +20,7 @@ else
 end
 
 RbCryptoTracker.plugin :not_found do
-  raise "404 - File Not Found"
+  raise '404 - File Not Found'
 end
 RbCryptoTracker.plugin :error_handler do |e|
   raise e
@@ -26,16 +28,18 @@ end
 
 Capybara.app = RbCryptoTracker.freeze.app
 
-class Minitest::HooksSpec
-  include Rack::Test::Methods
-  include Capybara::DSL
+module Minitest
+  class HooksSpec
+    include Rack::Test::Methods
+    include Capybara::DSL
 
-  def app
-    Capybara.app
-  end
+    def app
+      Capybara.app
+    end
 
-  after do
-    Capybara.reset_sessions!
-    Capybara.use_default_driver
+    after do
+      Capybara.reset_sessions!
+      Capybara.use_default_driver
+    end
   end
 end

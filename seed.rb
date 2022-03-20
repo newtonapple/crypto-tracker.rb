@@ -18,6 +18,7 @@ class Currency
 end
 
 class Seed
+  # rubocop:disable Metrics
   def self.run!
     DB.transaction do
       seed = new
@@ -34,8 +35,8 @@ class Seed
         ]
       )
 
-      fiats = Oj.load(File.open('seed/fiats.json', 'r').read).map { |c| [c['name'], c['symbol'], 'fiat'] }
-      cryptos = Oj.load(File.open('seed/cryptos.json', 'r').read).map { |c| [c['name'], c['symbol'], 'crypto'] }
+      fiats = Oj.load(File.read('seed/fiats.json')).map { |c| [c['name'], c['symbol'], 'fiat'] }
+      cryptos = Oj.load(File.read('seed/cryptos.json')).map { |c| [c['name'], c['symbol'], 'crypto'] }
       seed.currencies(fiats)
       seed.currencies(cryptos)
     end
@@ -45,6 +46,7 @@ class Seed
     puts "Platform.count: #{Platform.count}"
     puts "Currency.count: #{Currency.count}"
   end
+  # rubocop:enable Metrics
 
   def platforms(platforms)
     platforms.map do |platform|

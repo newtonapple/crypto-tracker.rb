@@ -1,6 +1,15 @@
+AllCops:
+  NewCops: enable
+
 require:
   - rubocop-performance
   - rubocop-sequel
+
+Style/Documentation:
+  Enabled: false
+
+Layout/LineLength:
+  Max: 250
 
 # Metrics Cops
 
@@ -20,10 +29,12 @@ Metrics/ParameterLists:
   Enabled: true
 
 Metrics/MethodLength:
-  Description: 'Avoid methods longer than 25 lines of code.'
+  Description: 'Avoid methods longer than 50 lines of code.'
   StyleGuide: '<https://github.com/bbatsov/ruby-style-guide#short-methods>'
-  Max: 25
+  Max: 50
   Enabled: true
+  IgnoredMethods:
+    - to_s
 
 Metrics/BlockLength:
   CountComments: false
@@ -37,3 +48,16 @@ Metrics/BlockLength:
     - context
     - describe
     - it
+    - to_s
+
+Metrics/AbcSize:
+  IgnoredMethods:
+    - to_s
+
+Metrics/CyclomaticComplexity:
+  IgnoredMethods:
+    - to_s
+
+Metrics/PerceivedComplexity:
+  IgnoredMethods:
+    - to_s

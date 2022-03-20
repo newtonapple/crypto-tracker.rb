@@ -87,7 +87,7 @@ class Disposal < Sequel::Model
 
     currency_symbol = currency.symbol.ljust(symbol_width)
     fiat_symbol = fiat_currency.symbol.ljust(symbol_width)
-    avg_symbol = "#{fiat_currency.symbol}/#{currency.symbol}".ljust(symbol_width * 2 + 1)
+    avg_symbol = "#{fiat_currency.symbol}/#{currency.symbol}".ljust((symbol_width * 2) + 1)
 
     amount_col = format("%20.10f #{currency_symbol}", amount).rjust(25)
     cost_col = format("%6.2f #{fiat_symbol}", cost_amount).rjust(col_width)

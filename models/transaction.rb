@@ -204,6 +204,4 @@ class Transaction < Sequel::Model
       )
     end
   end
-
-
 end
