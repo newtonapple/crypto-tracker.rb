@@ -33,23 +33,46 @@ class Account < Sequel::Model
   one_to_many :account_wallets
   one_to_many :assets
   one_to_many :acquisitions
+  one_to_many :disposals
   one_to_many :transactions
   one_to_many :unprocessed_transactions, class: :Transaction do |ds|
     ds.where(processed: false).order(:completed_at)
   end
 
+  def reset_transactions!
+    delete_accounting_data!
+    unprocess_transactions!
+  end
+
   def unprocess_transactions!
     DB[:transactions].where(account_id: id).update(processed: false)
+    associations.delete(:transactions)
   end
 
-  def reset_transactions!
-    reset_assets!
+  def delete_transactions!
+    delete_accounting_data!
     DB[:transactions].where(account_id: id).delete
+    associations.delete(:transactions)
   end
 
-  def reset_assets!
+  def delete_accounting_data!
+    delete_disposals!
+    delete_assets!
+    delete_acquisitions!
+  end
+
+  def delete_disposals!
     DB[:disposals].where(account_id: id).delete
+    associations.delete(:disposals)
+  end
+
+  def delete_assets!
     DB[:assets].where(account_id: id).delete
+    associations.delete(:assets)
+  end
+
+  def delete_acquisitions!
     DB[:acquisitions].where(account_id: id).delete
+    associations.delete(:acquisitions)
   end
 end

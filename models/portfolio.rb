@@ -31,20 +31,11 @@ class Portfolio < Sequel::Model
     accounts.each(&:reset_transactions!)
   end
 
-  def import_transactions!
-    unprocessed_transactions.each do |t|
-      t.process!
-    end
+  def delete_transactions!
+    accounts.each(&:delete_transactions!)
   end
 
-  def platforms!(new_platforms)
-    new_portfolios_platforms = (new_platforms - platforms).map { |platform| [id, platform.id] }
-    removal_platform_ids = (platforms - new_platforms).map(&:id)
-
-    portfolios_platforms = DB[:portfolios_platforms]
-    portfolios_platforms.where(portfolio_id: id, platform_id: removal_platform_ids).delete if removal_platform_ids.any?
-    new_portfolios_platforms.any? && portfolios_platforms.import(%i[portfolio_id platform_id], new_portfolios_platforms)
-
-    associations.delete(:platforms) if new_portfolios_platforms.any? || removal_platform_ids.any?
+  def import_transactions!
+    unprocessed_transactions.each(&:process!)
   end
 end

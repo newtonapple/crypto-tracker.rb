@@ -62,8 +62,9 @@ class Transaction < Sequel::Model
       process_acquisition!
     when 'sell'
       process_disposal!
-      # when 'exchange'
-      #   t.process_disposal!
+    when 'exchange'
+      t.process_disposal!
+      t.process_acquisition!
     end
   end
 
@@ -135,13 +136,25 @@ class Transaction < Sequel::Model
   private
 
   def process_acquisition!
+    return if type == 'exchange' && market_value.nil?
+
+    if form_currency.crypto?
+      cost_currency = market_value_currency
+      cost_amount = market_value
+    else
+      cost_currency = from_currency.abs
+      cost_amount = from_amount
+    end
+
     Acquisition.create(
       transaction: self,
       account:,
       currency: to_currency,
       amount: to_amount,
-      cost_currency: from_currency,
-      cost_amount: fee ? from_amount.abs + fee.abs : from_amount.abs,
+      # cost_currency: from_currency,
+      # cost_amount: fee ? from_amount.abs + fee.abs : from_amount.abs,
+      cost_currency:,
+      cost_amount: fee ? cost_amount + fee.abs : cost_amount,
       has_cost: true,
       type:,
       acquired_at: completed_at
