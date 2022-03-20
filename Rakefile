@@ -85,6 +85,13 @@ task :prod_irb do
   irb.call('production')
 end
 
+desc 'Open Pry console in development mode'
+task :console do
+  ENV['RACK_ENV'] = 'development'
+  trap('INT', 'IGNORE')
+  sh 'bin/console'
+end
+
 # Specs
 
 spec = proc do |pattern|
