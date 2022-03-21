@@ -2,6 +2,8 @@
 
 # frozen_string_literal: true
 
+ENV['RACK_ENV'] ||= 'development'
+
 require 'pry'
 require 'debug'
 require_relative '../init'
@@ -10,4 +12,4 @@ def reload!
   Unreloader.reload!
 end
 
-binding.pry
+binding.pry  # rubocop:disable Lint/Debugger

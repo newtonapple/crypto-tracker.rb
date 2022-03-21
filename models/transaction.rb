@@ -51,6 +51,15 @@ class Transaction < Sequel::Model
   many_to_one :from_wallet, class: :Wallet
   many_to_one :to_wallet, class: :Wallet
 
+  TABLE_HEADERS = [
+    'id', 'type', 'platform_transaction_id',
+    'from_amount', ' ', 'to_amount', ' ',
+    'market_value', ' ', 'fee', ' ',
+    'completed_at', 'processed'
+  ].freeze
+  TABLE_ALIGNMENTS = %i[left right left right left right left right left right left left center].freeze
+  extend TableFormatter
+
   def before_validation
     self.portfolio_id = account.portfolio_id if portfolio_id.nil?
     super
@@ -63,49 +72,27 @@ class Transaction < Sequel::Model
     when 'sell'
       process_disposal!
     when 'exchange'
-      t.process_disposal!
-      t.process_acquisition!
+      # t.process_disposal!
+      # t.process_acquisition!
     end
   end
 
-  def to_s
-    return super unless from_amount && to_amount && from_currency && to_currency
-
-    output = +''
-    col_width = 30
-    symbol_width = 8
-    if id
-      id_col = id.to_s.rjust(15)
-      output << id_col
-      output << ' | '
-    end
-    type_col = type.rjust(12)
-    from_currency_symbol = "(#{from_currency.symbol})".ljust(symbol_width)
-    from_col = format("%20.10f #{from_currency_symbol}", from_amount)
-    to_currency_symbol = "(#{to_currency.symbol})".ljust(symbol_width)
-
-    to_col = format("%20.10f #{to_currency_symbol}", to_amount)
-    output << "#{type_col} | #{from_col.rjust(col_width)} -> #{to_col.rjust(col_width)}"
-
-    if fee && fee_currency
-      fee_currency_symbol = "(#{fee_currency.symbol})".ljust(symbol_width)
-      fee_col = format("%13.10f #{fee_currency_symbol}", fee)
-      output << " | #{fee_col.rjust(col_width - 3)}"
-    else
-      output << ' | '.ljust(col_width)
-    end
-
-    if market_value && market_value_currency
-      market_value_currency_symbol = "(#{market_value_currency.symbol})".ljust(symbol_width)
-      market_value_col = format("%20.10f #{market_value_currency_symbol}", market_value)
-      output << " | #{market_value_col.rjust(col_width)}"
-    else
-      output << ' | '.ljust(col_width + 3)
-    end
-
-    output << (completed_at ? " | @ #{completed_at}" : ' | '.ljust(col_width))
-    output << " | #{platform_transaction_id}" if platform_transaction_id
-    output
+  def table_row
+    [
+      id,
+      type,
+      platform_transaction_id,
+      from_amount.to_s('F'),
+      from_currency.symbol,
+      to_amount.to_s('F'),
+      to_currency.symbol,
+      market_value&.to_s('F'),
+      market_value_currency&.symbol,
+      fee&.to_s('F'),
+      fee_currency&.symbol,
+      completed_at ? completed_at.strftime('%Y-%m-%d %H:%M:%S') : '',
+      processed
+    ]
   end
 
   def set_amount!(currency, amount)

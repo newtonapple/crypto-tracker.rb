@@ -39,6 +39,10 @@ class Asset < Sequel::Model
   many_to_one :cost_currency, class: :Currency
   many_to_one :acquisition
 
+  TABLE_HEADERS = ['id', 'type', 'amount', ' ', 'cost', ' ', 'cost_avg', ' ', 'acquired_at'].freeze
+  TABLE_ALIGNMENTS = %i[left left right left right left right left left].freeze
+  extend TableFormatter
+
   class << self
     def disposal_lots(account:, currency:, amount:, disposed_at:)
       send("#{account.accounting_method}_disposal_lots", account:, currency:, amount:, disposed_at:)
@@ -100,32 +104,17 @@ class Asset < Sequel::Model
     end
   end
 
-  def to_s
-    output = +''
-    col_width = 25
-    symbol_width = 8
-    if id
-      id_col = id.to_s.rjust(15)
-      output << id_col
-      output << ' | '
-    end
-
-    account_col = account.name.rjust(15)
-    output << account_col
-    output << ' | '
-
-    type_col = type.rjust(12)
-    currency_symbol = currency.symbol.ljust(symbol_width)
-    currency_col = format("%20.10f #{currency_symbol}", amount)
-    cost_currency_symbol = cost_currency.symbol.ljust(symbol_width)
-    cost_currency_col = format("%20.10f #{cost_currency_symbol}", cost_amount)
-    avg_currency_symbol = "#{cost_currency.symbol} / #{currency.symbol}".ljust((symbol_width * 2) - 4)
-    avg_cost_currency_col = format("%20.10f #{avg_currency_symbol}", average_cost_amount)
-
-    output << type_col
-    output << " | #{currency_col.rjust(col_width)} x #{avg_cost_currency_col}"
-    output << " = #{cost_currency_col.rjust(col_width)}"
-    output << " | @ #{acquired_at}"
-    output
+  def table_row
+    [
+      id,
+      type,
+      amount.to_s('F'),
+      currency.symbol,
+      cost_amount.round(2).to_s('F'),
+      cost_currency.symbol,
+      average_cost_amount.round(2).to_s('F'),
+      "#{cost_currency.symbol}/#{currency.symbol}",
+      acquired_at.strftime('%Y-%m-%d %H:%M:%S')
+    ]
   end
 end

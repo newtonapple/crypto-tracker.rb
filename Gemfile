@@ -19,6 +19,8 @@ gem 'sequel', '>= 5'
 gem 'sequel_pg', '>= 1.8'
 gem 'slim', '>= 4.1'
 gem 'tilt', '>= 2.0.9'
+gem 'tty-table'
+
 group :development do
   gem 'debug', '>= 1.0.0'
   gem 'pry'

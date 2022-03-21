@@ -49,6 +49,19 @@ class Disposal < Sequel::Model
   many_to_one :transaction
   many_to_one :acquisition
 
+  TABLE_HEADERS = [
+    'id',
+    'amount', '',
+    'cost', '', 'cost_avg', '',
+    'sold', '', 'sold_avg', '',
+    'p/l', '',
+    'tax_treatment', 'days_held',
+    'acquisition', 'acquired_at',
+    'disposal', 'disposed_at'
+  ].freeze
+  TABLE_ALIGNMENTS = (%i[left] + (%i[right left] * 6) + (%i[center] * 6)).freeze
+  extend TableFormatter
+
   # 366 days
   # reference: https://www.tradelogsoftware.com/resources/filing-taxes/capital-gains/
   LONG_TERM_GAIN_DAYS = 366
@@ -68,44 +81,27 @@ class Disposal < Sequel::Model
     acquired_at&.to_date
   end
 
-  def to_s
-    output = +''
-    col_width = 10
-    symbol_width = 5
-    if id
-      id_col = id.to_s.rjust(15)
-      output << id_col
-      output << ' | '
-    end
-
-    account_col = account.name.rjust(15)
-    output << account_col
-    output << ' | '
-
-    type_col = type.rjust(12)
-    acquisition_type_col = acquisition_type.rjust(12)
-
-    currency_symbol = currency.symbol.ljust(symbol_width)
-    fiat_symbol = fiat_currency.symbol.ljust(symbol_width)
-    avg_symbol = "#{fiat_currency.symbol}/#{currency.symbol}".ljust((symbol_width * 2) + 1)
-
-    amount_col = format("%20.10f #{currency_symbol}", amount).rjust(25)
-    cost_col = format("%6.2f #{fiat_symbol}", cost_amount).rjust(col_width)
-    avg_cost_col = format("(@ %6.2f #{avg_symbol})", cost_amount / amount).ljust(col_width + 4)
-    sold_col = format("%9.2f #{fiat_symbol}", sold_amount).rjust(col_width)
-    avg_sold_col = format("(@ %6.2f #{fiat_symbol})", sold_amount / amount).ljust(col_width + 4)
-    net_col = format("%9.2f #{fiat_symbol}", net_amount).rjust(col_width)
-
-    output << acquisition_type_col
-    output << " | #{type_col}"
-    output << " | #{amount_col}"
-    output << " | #{sold_col} #{avg_sold_col} - #{cost_col} #{avg_cost_col} = #{net_col}"
-
-    output << " | #{capital_gains_treatment.rjust(12)}"
-
-    days = (disposed_on - acquired_on).to_i
-    output << " | @ #{acquired_on} - #{disposed_on} = #{days} days"
-    output
+  def table_row
+    avg_currency_symbol = "#{fiat_currency.symbol}/#{currency.symbol}"
+    [
+      # id & types
+      id,
+      # amount,
+      amount.to_s('F'), currency.symbol,
+      # cost
+      cost_amount.round(2).to_s('F'), fiat_currency.symbol,
+      (cost_amount / amount).round(2).to_s('F'), avg_currency_symbol,
+      # sold
+      sold_amount.round(2).to_s('F'), fiat_currency.symbol,
+      (sold_amount / amount).round(2).to_s('F'), avg_currency_symbol,
+      # net
+      net_amount.round(2).to_s('F'), fiat_currency.symbol,
+      # dates
+      capital_gains_treatment,
+      (disposed_on - acquired_on).to_i,
+      acquisition_type, acquired_at.strftime('%Y-%m-%d %H:%M:%S'),
+      type, disposed_at.strftime('%Y-%m-%d %H:%M:%S')
+    ]
   end
 
   private

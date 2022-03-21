@@ -86,7 +86,7 @@ task :prod_irb do
 end
 
 desc 'Open Pry console in development mode'
-task :console do
+task :pry do
   ENV['RACK_ENV'] = 'development'
   trap('INT', 'IGNORE')
   sh 'bin/console'

@@ -9,7 +9,7 @@ Style/Documentation:
   Enabled: false
 
 Layout/LineLength:
-  Max: 250
+  Max: 155
 
 # Metrics Cops
 
@@ -34,7 +34,7 @@ Metrics/MethodLength:
   Max: 50
   Enabled: true
   IgnoredMethods:
-    - to_s
+    - table_row
 
 Metrics/BlockLength:
   CountComments: false
@@ -48,16 +48,15 @@ Metrics/BlockLength:
     - context
     - describe
     - it
-    - to_s
 
 Metrics/AbcSize:
   IgnoredMethods:
-    - to_s
+    - table_row
 
 Metrics/CyclomaticComplexity:
   IgnoredMethods:
-    - to_s
+    - table_row
 
 Metrics/PerceivedComplexity:
   IgnoredMethods:
-    - to_s
+    - table_row
