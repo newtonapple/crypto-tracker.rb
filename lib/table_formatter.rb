@@ -3,7 +3,7 @@
 require 'tty/table'
 
 module TableFormatter
-  def render_table(rows, format: :basic, header: self::TABLE_HEADERS, alignments: self::TABLE_ALIGNMENTS)
+  def render_table(rows, format: :unicode, header: self::TABLE_HEADERS, alignments: self::TABLE_ALIGNMENTS)
     table(rows, header:).render(format, alignments:)
   end
 

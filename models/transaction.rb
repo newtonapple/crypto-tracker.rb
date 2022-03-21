@@ -69,11 +69,14 @@ class Transaction < Sequel::Model
     case type
     when 'buy'
       process_acquisition!
+      update(processed: true)
     when 'sell'
       process_disposal!
+      update(processed: true)
     when 'exchange'
-      # t.process_disposal!
-      # t.process_acquisition!
+      process_disposal!
+      process_acquisition!
+      update(processed: true)
     end
   end
 
@@ -125,12 +128,15 @@ class Transaction < Sequel::Model
   def process_acquisition!
     return if type == 'exchange' && market_value.nil?
 
-    if form_currency.crypto?
+    if from_currency.crypto? # exchange
       cost_currency = market_value_currency
       cost_amount = market_value
-    else
-      cost_currency = from_currency.abs
-      cost_amount = from_amount
+      # add fee to cost
+      cost_amount += (market_value / from_amount.abs) * fee.abs if fee
+    else # buy
+      cost_currency = from_currency
+      cost_amount = from_amount.abs
+      cost_amount += fee.abs if fee
     end
 
     Acquisition.create(
@@ -138,23 +144,37 @@ class Transaction < Sequel::Model
       account:,
       currency: to_currency,
       amount: to_amount,
-      # cost_currency: from_currency,
-      # cost_amount: fee ? from_amount.abs + fee.abs : from_amount.abs,
       cost_currency:,
-      cost_amount: fee ? cost_amount + fee.abs : cost_amount,
+      cost_amount:,
       has_cost: true,
       type:,
       acquired_at: completed_at
     )
-    update(processed: true)
   end
 
   def process_disposal!
-    # type is sell
-    # to_amount is fiat
-    # fee is fiat & negative
     disposed_amount = from_amount.abs # crypto
-    fiat_amount = to_amount + (fee || 0)
+    if to_currency.crypto?
+      # "exchange" type
+      #   to_amount is crypto
+      #   market_value contains the fiat value, but does not include the fee
+      #   fee is denominated in crypto
+      fiat_currency = market_value_currency
+      fiat_amount = market_value
+      if fee
+        fee_amount = fee.abs
+        fiat_amount += (market_value / disposed_amount) * fee_amount
+        disposed_amount += fee_amount # fee is also being disposed
+      end
+    else
+      # "sell" type
+      #  to_amount contains fiat value
+      #  fee is fiat & negative
+      fiat_currency = to_currency
+      # selling into fiat, so we need to deduct the fee
+      fiat_amount = to_amount + (fee || 0)
+    end
+
     fiat_price = fiat_amount / disposed_amount
 
     assets = Asset.disposal_lots(account:, currency: from_currency, amount: disposed_amount, disposed_at: completed_at)
@@ -177,7 +197,7 @@ class Transaction < Sequel::Model
         account:,
         transaction: self,
         currency: from_currency,
-        fiat_currency: to_currency,
+        fiat_currency:,
         amount:,
         cost_amount:,
         sold_amount:,

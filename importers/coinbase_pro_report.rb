@@ -51,10 +51,6 @@ module Importers
       fetch_market_values_from_fills(async_connection, orders)
     end
 
-    def to_s
-      transactions.values.join("\n")
-    end
-
     private
 
     def fetch_market_values_from_fills(conn, orders, batch_size = 3)
