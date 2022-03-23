@@ -106,7 +106,7 @@ module Importers
       tx_id = "conversion:#{time.to_i}"
       transaction = @transactions[tx_id] ||= Transaction.new(
         account: @account,
-        platform_transaction_id: "#{@account.id}:#{tx_id}",
+        platform_transaction_id: "#{@account.id}:#{tx_id}:#{row[CURRENCY]}:#{row[AMOUNT]}",
         completed_at: time
       )
       transaction.set_amount!(Currency.by_symbol(row[CURRENCY]), BigDecimal(row[AMOUNT]))
