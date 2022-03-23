@@ -38,7 +38,20 @@ module Importers
       transactions
     end
 
-    def fill_exchange_fees!(async_connection = CoinbaseExchange::AsyncConnection.build)
+    def fill_transfer_fees!(async_connection = CoinbaseExchange::AsyncConnection.build)
+      transfers = []
+      transactions.each_value do |t|
+        next unless t.type == 'transfer_out'
+
+        transfer_id = t.platform_transaction_id
+        next unless transfer_id
+
+        transfers << t
+      end
+      fetch_fees_from_transfers(async_connection, transfers)
+    end
+
+    def fill_exchange_market_values!(async_connection = CoinbaseExchange::AsyncConnection.build)
       orders = Hash.new { |h, k| h[k] = {} }
       transactions.each_value do |t|
         next unless t.type == 'exchange'
@@ -53,6 +66,20 @@ module Importers
 
     private
 
+    def fetch_fees_from_transfers(conn, transfers, batch_size = 3)
+      transfers.each_slice(batch_size) do |transfers_batch|
+        Async do |task|
+          transfers_batch.each do |transfer|
+            task.async do
+              t = conn.get("/transfers/#{transfer.platform_transaction_id}").body
+              transfer.fee_currency = transfer.from_currency
+              transfer.fee = -BigDecimal(t['details']['fee'])
+            end
+          end
+        end
+      end
+    end
+
     def fetch_market_values_from_fills(conn, orders, batch_size = 3)
       usd = Currency.by_symbol('USD')
       orders.keys.each_slice(batch_size) do |order_ids|
@@ -65,8 +92,8 @@ module Importers
                 transaction = orders[order_id][fill['trade_id'].to_s]
                 next unless transaction
 
-                transaction.market_value = BigDecimal(fill['usd_volume'])
                 transaction.market_value_currency = usd
+                transaction.market_value = BigDecimal(fill['usd_volume'])
               end
             end
           end
