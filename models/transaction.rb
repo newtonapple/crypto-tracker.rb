@@ -146,7 +146,6 @@ class Transaction < Sequel::Model
       amount: to_amount,
       cost_currency:,
       cost_amount:,
-      has_cost: true,
       type:,
       acquired_at: completed_at
     )

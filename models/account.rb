@@ -47,12 +47,14 @@ class Account < Sequel::Model
   def unprocess_transactions!
     DB[:transactions].where(account_id: id).update(processed: false)
     associations.delete(:transactions)
+    associations.delete(:unprocessed_transactions)
   end
 
   def delete_transactions!
     delete_accounting_data!
     DB[:transactions].where(account_id: id).delete
     associations.delete(:transactions)
+    associations.delete(:unprocessed_transactions)
   end
 
   def delete_accounting_data!

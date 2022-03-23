@@ -35,7 +35,7 @@ class Portfolio < Sequel::Model
     accounts.each(&:delete_transactions!)
   end
 
-  def import_transactions!
+  def process_transactions!
     unprocessed_transactions.each(&:process!)
   end
 end

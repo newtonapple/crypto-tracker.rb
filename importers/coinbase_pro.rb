@@ -4,7 +4,7 @@ require 'csv'
 
 module Importers
   # Importer for Coinbase Exchange API
-  class CoinbaseProReport
+  class CoinbasePro
     TYPE = 'type'
     TIME = 'time'
     AMOUNT = 'amount'

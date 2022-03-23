@@ -57,9 +57,9 @@ Sequel.migration do
       DateTime :created_at, null: false, index: true
       DateTime :updated_at, null: false
 
+      unique %i[account_id type platform_transaction_id]
       index %i[portfolio_id completed_at type]
 
-      unique %i[account_id type platform_transaction_id]
       index %i[account_id platform_transaction_id]
       index %i[account_id completed_at type]
       index %i[account_id processed completed_at type]

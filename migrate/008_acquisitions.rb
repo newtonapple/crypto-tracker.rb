@@ -27,17 +27,11 @@ Sequel.migration do
       foreign_key :cost_currency_id, :currencies
       BigDecimal :cost_amount
       BigDecimal :average_cost_amount
-      Boolean :has_cost, default: false, null: false
       acquisition_type :type, null: false
       DateTime :acquired_at, null: false
       DateTime :created_at, null: false
 
       index %i[account_id acquired_at]
-
-      index %i[account_id has_cost acquired_at]
-      index %i[account_id has_cost currency_id acquired_at]
-      index %i[account_id has_cost currency_id type acquired_at]
-
       index %i[account_id type acquired_at]
       index %i[account_id currency_id acquired_at]
       index %i[account_id currency_id type acquired_at]
