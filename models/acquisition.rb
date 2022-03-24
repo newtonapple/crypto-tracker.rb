@@ -85,7 +85,7 @@ class Acquisition < Sequel::Model
   end
 
   def set_average_cost_amount
-    return unless average_cost_amount.nil? && has_cost && cost_amount && amount&.positive?
+    return unless average_cost_amount.nil? && cost_amount && amount&.positive?
 
     self.average_cost_amount = cost_amount / amount
   end
