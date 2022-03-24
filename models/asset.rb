@@ -65,7 +65,7 @@ class Asset < Sequel::Model
     end
 
     def hifo_disposal_lots(account:, currency:, amount:, disposed_at:)
-      assets = disposable(account.id, currency.id, disposed_at).order(Sequel.desc(:average_cost_amount), :acquired_at, :id)
+      assets = disposable(account.id, currency.id, disposed_at).reverse(:average_cost_amount, :acquired_at, :id)
 
       find_disposal_lots(assets, amount) do |lot|
         assets.where { average_cost_amount <= lot.average_cost_amount }
