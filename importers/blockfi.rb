@@ -2,10 +2,47 @@
 
 require 'csv'
 require 'set'
+require 'pdf-reader'
+require 'strscan'
 
 module Importers
   # Importer for BlockFi
   class BlockFi
+    class PdfPriceExtractor
+      attr_reader :monthly_prices, :pdf_file_names
+
+      def initialize(pdf_file_names)
+        @pdf_file_names = pdf_file_names
+        @monthly_prices = {}
+      end
+
+      def extract!
+        pdf_file_names.each do |pdf|
+          extract_pdf!(pdf)
+        end
+        monthly_prices
+      end
+
+      def extract_pdf!(pdf_file_name)
+        pdf = PDF::Reader.new(pdf_file_name)
+        text = pdf.pages.map(&:text).join("\n").squeeze("\n")
+
+        scanner = StringScanner.new(text)
+        scanner.skip_until(/Month Ending\s+/)
+        date = Date.parse(scanner.scan_until(/\n/).strip)
+        pricing = {}
+        @monthly_prices["#{date.year}-#{date.month}"] = pricing
+        scanner.skip_until(/Ending Balance/)
+        until scanner.eos?
+          scanner.skip_until(/1/)
+          crypto = scanner.scan_until(/\n/).lstrip.split(/\s+/).first
+          price = scanner.scan_until(/\n/).lstrip.split(/\s+/).first
+          pricing[crypto] = BigDecimal(price.gsub(/[$,]/, '')).to_f
+          return monthly_prices if scanner.peek(10).lstrip.start_with?('Total*')
+        end
+      end
+    end
+
     TYPE = 'Transaction Type'
     TIME = 'Confirmed At'
     AMOUNT = 'Amount'
@@ -15,11 +52,16 @@ module Importers
 
     attr_reader :account, :fiat_currency, :transactions
 
-    def initialize(account:, fiat_currency: Currency.by_symbol('USD'))
+    def initialize(account:, monthly_prices: {}, fiat_currency: Currency.by_symbol('USD'))
       @account = account
       @fiat_currency = fiat_currency
       @trade_transactions = {}
+      @monthly_prices
       @transactions = []
+    end
+
+    def parse_monthly_prices_from_pdfs(pdf_file_names)
+      @monthly_prices = PdfPriceExtractor.new(pdf_file_names).extract!
     end
 
     def parse!(report)
@@ -56,7 +98,7 @@ module Importers
           parse_sell!(row)
         when 'Cc Rewards Redemption', 'Cc Trading Rebate'
           parse_crypto_transaction!(row, 'refund')
-        when 'Interest Payment'
+        when 'Interest Payment', 'Bonus Payment'
           parse_crypto_transaction!(row, 'interest')
         when 'Crypto Transfer'
           parse_crypto_transaction!(row, 'transfer_in')
@@ -86,8 +128,7 @@ module Importers
       transaction.type = 'sell'
       transaction.from_currency = currency
       transaction.from_amount = amount
-
-      return unless DOLLAR_PEGGED_COINS.include?(currency)
+      return unless dollar_pegged_coin?(currency)
 
       transaction.to_currency = fiat_currency
       transaction.to_amount = amount.abs
@@ -104,6 +145,7 @@ module Importers
       transaction.to_currency = currency
       transaction.to_amount = amount
       transaction.type = type
+      set_market_value_from_monthly_pricing(transaction) if %w[refund interest].include?(type)
     end
 
     # each trade contains 2 rows in the CSV
@@ -125,6 +167,19 @@ module Importers
         transaction.market_value = transaction.to_amount
         transaction.market_value_currency = fiat_currency
       end
+    end
+
+    def set_market_value_from_monthly_pricing(transaction)
+      time = transaction.completed_at
+      month = "#{time.year}-#{time.month}"
+      prices = @monthly_prices[month]
+      return unless prices
+
+      price = prices[transaction.to_currency.symbol]
+      return unless price
+
+      transaction.market_value_currency = fiat_currency
+      transaction.market_value = price * transaction.to_amount
     end
 
     def init_trade(row)
