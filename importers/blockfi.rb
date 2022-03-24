@@ -37,7 +37,7 @@ module Importers
           scanner.skip_until(/1/)
           crypto = scanner.scan_until(/\n/).lstrip.split(/\s+/).first
           price = scanner.scan_until(/\n/).lstrip.split(/\s+/).first
-          pricing[crypto] = BigDecimal(price.gsub(/[$,]/, '')).to_f
+          pricing[crypto] = BigDecimal(price.gsub(/[$,]/, ''))
           return monthly_prices if scanner.peek(10).lstrip.start_with?('Total*')
         end
       end
