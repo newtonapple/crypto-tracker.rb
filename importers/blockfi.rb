@@ -56,7 +56,7 @@ module Importers
       @account = account
       @fiat_currency = fiat_currency
       @trade_transactions = {}
-      @monthly_prices
+      @monthly_prices = monthly_prices
       @transactions = []
     end
 
@@ -98,8 +98,10 @@ module Importers
           parse_sell!(row)
         when 'Cc Rewards Redemption', 'Cc Trading Rebate'
           parse_crypto_transaction!(row, 'refund')
-        when 'Interest Payment', 'Bonus Payment'
+        when 'Interest Payment'
           parse_crypto_transaction!(row, 'interest')
+        when 'Bonus Payment'
+          parse_crypto_transaction!(row, 'reward')
         when 'Crypto Transfer'
           parse_crypto_transaction!(row, 'transfer_in')
         when 'Withdrawal'

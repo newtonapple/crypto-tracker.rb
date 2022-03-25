@@ -67,7 +67,7 @@ class Transaction < Sequel::Model
 
   def process!
     case type
-    when 'buy', 'interest', 'refund'
+    when 'buy', 'interest', 'reward', 'refund'
       process_acquisition!
       update(processed: true)
     when 'sell'
