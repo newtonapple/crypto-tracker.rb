@@ -78,7 +78,7 @@ module Importers
         transaction.type = 'transfer_in'
         transaction.to_currency = transaction.from_currency = crypto_currency
         transaction.to_amount = transaction.from_amount = amount
-      when 'withdraw'
+      when /^withdraw/
         transaction.type = 'transfer_out'
         transaction.to_currency = transaction.from_currency = -crypto_currency
         transaction.to_amount = transaction.from_amount = -amount
@@ -102,7 +102,7 @@ module Importers
       @transactions[trade_id] = Transaction.new(
         account: @account,
         platform_transaction_id: trade_id,
-        completed_at: row[TIME]
+        completed_at: row[TIME] # local time
       )
     end
   end
