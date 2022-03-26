@@ -30,6 +30,7 @@ class Seed
           ['Coinbase Pro', 'https://pro.coinbase.com'],
           ['Coinbase Wallet', 'https://www.coinbase.com/wallet'],
           ['Gemini', 'https://www.gemini.com/'],
+          ['Gemini Earn', 'https://www.gemini.com/earn'],
           ['MetaMask', 'https://metamask.io/'],
           ['Voyager', 'https://www.investvoyager.com/']
         ]
