@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative 'lib/table_formatter'
+require_relative 'lib/txf'
 require_relative 'db'
 require 'sequel/model'
 

@@ -67,6 +67,7 @@ class Disposal < Sequel::Model
   ].freeze
   TABLE_ALIGNMENTS = (%i[right left left] + (%i[right left] * 6) + (%i[center] * 6)).freeze
   extend TableFormatter
+  extend Txf::Form8949
 
   # 366 days
   # reference: https://www.tradelogsoftware.com/resources/filing-taxes/capital-gains/
