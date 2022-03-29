@@ -5,11 +5,11 @@ Sequel.migration do
     create_enum(
       :transaction_type,
       %w[
+        transfer_out
+        transfer_in
         buy
         sell
         exchange
-        transfer_in
-        transfer_out
         refund
         income
         interest
@@ -32,15 +32,15 @@ Sequel.migration do
       primary_key :id
       foreign_key :portfolio_id, :portfolios, null: false
       foreign_key :account_id, :accounts, null: false
-      String  :platform_transaction_id, null: false
+      String :platform_transaction_id, null: false
 
-      Integer :from_wallet_id, index: true
-      Integer :to_wallet_id, index: true
+      foreign_key :from_wallet_id, :account_wallets
+      foreign_key :to_wallet_id, :account_wallets
 
-      Integer :from_currency_id, null: false
-      Integer :to_currency_id, null: false
-      Integer :fee_currency_id
-      Integer :market_value_currency_id
+      foreign_key :from_currency_id, :currencies, null: false
+      foreign_key :to_currency_id, :currencies, null: false
+      foreign_key :fee_currency_id, :currencies
+      foreign_key :market_value_currency_id, :currencies
       # BigDecimal :from_amount, size: [27, 18]
       # BigDecimal :to_amount, size: [27, 18]
       # BigDecimal :fee, size: [27, 18]

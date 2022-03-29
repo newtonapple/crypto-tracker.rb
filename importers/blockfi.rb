@@ -147,7 +147,8 @@ module Importers
       transaction.to_currency = currency
       transaction.to_amount = amount
       transaction.type = type
-      set_market_value_from_monthly_pricing(transaction) if %w[refund interest].include?(type)
+      infer_market_value_from_monthly_pricing(transaction)
+      infer_market_value(transaction)
     end
 
     # each trade contains 2 rows in the CSV
@@ -160,7 +161,7 @@ module Importers
     end
 
     def infer_market_value(transaction)
-      return if transaction.type != 'exchange'
+      return unless %w[exchange transferred_in].include?(transaction.type)
 
       if dollar_pegged_coin?(transaction.from_currency)
         transaction.market_value = transaction.from_amount.abs
@@ -171,7 +172,9 @@ module Importers
       end
     end
 
-    def set_market_value_from_monthly_pricing(transaction)
+    def infer_market_value_from_monthly_pricing(transaction)
+      return unless %w[interest reward refund].include?(transaction.type)
+
       time = transaction.completed_at
       month = "#{time.year}-#{time.month}"
       prices = @monthly_prices[month]

@@ -11,31 +11,71 @@
 #  portfolios_created_at_index | btree (created_at)
 #  portfolios_name_index       | btree (name)
 # Referenced By:
-#  accounts     | accounts_portfolio_id_fkey     | (portfolio_id) REFERENCES portfolios(id)
-#  assets       | assets_portfolio_id_fkey       | (portfolio_id) REFERENCES portfolios(id)
-#  disposals    | disposals_portfolio_id_fkey    | (portfolio_id) REFERENCES portfolios(id)
-#  transactions | transactions_portfolio_id_fkey | (portfolio_id) REFERENCES portfolios(id)
+#  accounts           | accounts_portfolio_id_fkey           | (portfolio_id) REFERENCES portfolios(id)
+#  assets             | assets_portfolio_id_fkey             | (portfolio_id) REFERENCES portfolios(id)
+#  disposals          | disposals_portfolio_id_fkey          | (portfolio_id) REFERENCES portfolios(id)
+#  transactions       | transactions_portfolio_id_fkey       | (portfolio_id) REFERENCES portfolios(id)
+#  transferred_assets | transferred_assets_portfolio_id_fkey | (portfolio_id) REFERENCES portfolios(id)
+#  transfers          | transfers_portfolio_id_fkey          | (portfolio_id) REFERENCES portfolios(id)
 
 class Portfolio < Sequel::Model
   many_to_many :platforms, join_table: :accounts
   one_to_many :accounts
   one_to_many :assets
   one_to_many :disposals
-
   one_to_many :transactions
   one_to_many :unprocessed_transactions, class: :Transaction do |ds|
-    ds.eager(:account).where(processed: false).order(:completed_at)
+    ds.eager(:account).where(processed: false).order(:completed_at, :type)
   end
+  one_to_many :transfers
+  one_to_many :transferred_assets
 
-  def reset_transactions!
-    accounts.each(&:reset_transactions!)
-  end
-
-  def delete_transactions!
-    accounts.each(&:delete_transactions!)
+  def acquisitions
+    Acquisition.where(account: accounts).eager(:account).order(:acquired_at)
   end
 
   def process_transactions!
     unprocessed_transactions.each(&:process!)
+  end
+
+  def reset_transactions!
+    delete_acquisitions!
+    DB[:transactions].where(portfolio_id: id).update(processed: false)
+    associations.delete(:transactions)
+    associations.delete(:unprocessed_transactions)
+  end
+
+  def delete_transactions!
+    delete_acquisitions!
+    DB[:transactions].where(portfolio_id: id).delete
+    associations.delete(:transactions)
+    associations.delete(:unprocessed_transactions)
+  end
+
+  def delete_acquisitions!
+    delete_assets!
+    account_ids = accounts { |ds| ds.select(:id) }.map(&:id)
+    DB[:acquisitions].where(account_id: account_ids).delete
+  end
+
+  def delete_assets!
+    delete_transfers!
+    delete_disposals!
+    DB[:assets].where(portfolio_id: id).delete
+    associations.delete(:assets)
+  end
+
+  def delete_transfers!
+    delete_transferred_assets!
+    DB[:transfers].where(portfolio_id: id).delete
+  end
+
+  def delete_transferred_assets!
+    DB[:transferred_assets].where(portfolio_id: id).delete
+  end
+
+  def delete_disposals!
+    DB[:disposals].where(portfolio_id: id).delete
+    associations.delete(:disposals)
   end
 end

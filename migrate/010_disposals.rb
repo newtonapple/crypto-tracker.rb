@@ -29,11 +29,17 @@ Sequel.migration do
       acquisition_type :acquisition_type, null: false
       disposal_type :type, null: false
       capital_gains_treatment :capital_gains_treatment, null: false
+      capital_gains_treatment :account_capital_gains_treatment, null: false
+
       BigDecimal :amount, null: false
-      BigDecimal :cost_amount, null: false # fiat
-      BigDecimal :sold_amount, null: false # fiat
-      BigDecimal :net_amount, null: false  # fiat
+      BigDecimal :cost_amount, null: false                     # fiat
+      BigDecimal :sold_amount, null: false                     # fiat
+      BigDecimal :net_amount, null: false                      # fiat
+      BigDecimal :account_cost_amount, null: false, default: 0 # fiat
+      BigDecimal :account_net_amount, null: false, default: 0  # fiat
+
       DateTime :acquired_at, null: false
+      DateTime :account_acquired_at, null: false
       DateTime :disposed_at, null: false
       DateTime :created_at, null: false, index: true
 

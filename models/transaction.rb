@@ -34,12 +34,19 @@
 #  transactions_account_id_type_from_currency_id_index       | btree (account_id, type, from_currency_id)
 #  transactions_account_id_type_to_currency_id_index         | btree (account_id, type, to_currency_id)
 #  transactions_created_at_index                             | btree (created_at)
-#  transactions_from_wallet_id_index                         | btree (from_wallet_id)
 #  transactions_portfolio_id_completed_at_type_index         | btree (portfolio_id, completed_at, type)
-#  transactions_to_wallet_id_index                           | btree (to_wallet_id)
 # Foreign key constraints:
-#  transactions_account_id_fkey   | (account_id) REFERENCES accounts(id)
-#  transactions_portfolio_id_fkey | (portfolio_id) REFERENCES portfolios(id)
+#  transactions_account_id_fkey               | (account_id) REFERENCES accounts(id)
+#  transactions_fee_currency_id_fkey          | (fee_currency_id) REFERENCES currencies(id)
+#  transactions_from_currency_id_fkey         | (from_currency_id) REFERENCES currencies(id)
+#  transactions_from_wallet_id_fkey           | (from_wallet_id) REFERENCES account_wallets(id)
+#  transactions_market_value_currency_id_fkey | (market_value_currency_id) REFERENCES currencies(id)
+#  transactions_portfolio_id_fkey             | (portfolio_id) REFERENCES portfolios(id)
+#  transactions_to_currency_id_fkey           | (to_currency_id) REFERENCES currencies(id)
+#  transactions_to_wallet_id_fkey             | (to_wallet_id) REFERENCES account_wallets(id)
+# Referenced By:
+#  transfers | transfers_from_transaction_id_fkey | (from_transaction_id) REFERENCES transactions(id)
+#  transfers | transfers_to_transaction_id_fkey   | (to_transaction_id) REFERENCES transactions(id)
 
 class Transaction < Sequel::Model
   many_to_one :portfolio
@@ -52,13 +59,48 @@ class Transaction < Sequel::Model
   many_to_one :to_wallet, class: :Wallet
 
   TABLE_HEADERS = [
-    'id', 'type', 'platform_transaction_id',
+    'account_id', 'account', 'id', 'type', 'platform_transaction_id',
     'from_amount', ' ', 'to_amount', ' ',
     'market_value', ' ', 'fee', ' ',
     'completed_at', 'processed'
   ].freeze
-  TABLE_ALIGNMENTS = %i[left right left right left right left right left right left left center].freeze
+  TABLE_ALIGNMENTS = %i[right left right right left right left right left right left right left left center].freeze
   extend TableFormatter
+
+  MAX_TRANSFER_DELTA_SECS = 60 * 60 * 24 # +/- 1 day
+
+  class << self
+    # transaton must be of type 'transfer_out'
+    def matching_transfer_in(transaction, time_delta_secs = MAX_TRANSFER_DELTA_SECS)
+      raise "#{transaction.type} is not a 'transfer_out' type" unless transaction.type == 'transfer_out'
+
+      matching_transfers(transaction, 'transfer_in', time_delta_secs)
+        .where(to_amount: -(transaction.to_amount - (transaction.fee || 0)))
+    end
+
+    # transaton must be of type 'transfer_in'
+    def matching_transfer_out(transaction, time_delta_secs = MAX_TRANSFER_DELTA_SECS)
+      raise "#{transaction.type} is not a 'transfer_in' type" unless transaction.type == 'transfer_in'
+
+      matching_transfers(transaction, 'transfer_out', time_delta_secs)
+        .where(Sequel.lit('(-to_amount + coalesce(fee, 0)) = ?', transaction.to_amount))
+    end
+
+    private
+
+    def matching_transfers(transaction, type, time_delta_secs = MAX_TRANSFER_DELTA_SECS)
+      portfolio_id = transaction.portfolio_id
+      account_id = transaction.account_id
+      from = transaction.completed_at - time_delta_secs
+      to = transaction.completed_at + time_delta_secs
+      from_currency_id = to_currency_id = transaction.to_currency_id
+      where(
+        portfolio_id:, type:,
+        from_currency_id:, to_currency_id:,
+        processed: false, completed_at: from..to
+      ).exclude(account_id:)
+    end
+  end
 
   def before_validation
     self.portfolio_id = account.portfolio_id if portfolio_id.nil?
@@ -77,25 +119,39 @@ class Transaction < Sequel::Model
       process_disposal!
       process_acquisition!
       update(processed: true)
+    when 'transfer_out'
+      process_transfer_out!
+    when 'transfer_in'
+      process_transfer_in!
     end
   end
 
-  def table_row
-    [
-      id,
-      type,
-      platform_transaction_id,
-      from_amount.to_s('F'),
-      from_currency.symbol,
-      to_amount.to_s('F'),
-      to_currency.symbol,
-      market_value&.to_s('F'),
-      market_value_currency&.symbol,
-      fee&.to_s('F'),
-      fee_currency&.symbol,
-      completed_at ? completed_at.strftime('%Y-%m-%d %H:%M:%S') : '',
-      processed
-    ]
+  def transfer
+    @transfer ||= case type
+                  when 'transfer_out'
+                    Transfer.find(from_account: account, from_transaction: self)
+                  when 'transfer_in'
+                    Transfer.find(to_account: account, to_transaction: self)
+                  end
+  end
+
+  def matching_transfers(time_delta_secs = MAX_TRANSFER_DELTA_SECS)
+    case type
+    when 'transfer_out'
+      matching_transfer_in(time_delta_secs)
+    when 'transfer_in'
+      matching_transfer_out(time_delta_secs)
+    else
+      raise "#{type} is not a transfer type"
+    end
+  end
+
+  def matching_transfer_in(time_delta_secs = MAX_TRANSFER_DELTA_SECS)
+    self.class.matching_transfer_in(self, time_delta_secs)
+  end
+
+  def matching_transfer_out(time_delta_secs = MAX_TRANSFER_DELTA_SECS)
+    self.class.matching_transfer_out(self, time_delta_secs)
   end
 
   def set_amount!(currency, amount)
@@ -123,12 +179,32 @@ class Transaction < Sequel::Model
     nil
   end
 
+  def table_row
+    [
+      account_id,
+      account.name,
+      id,
+      type,
+      platform_transaction_id.length > 50 ? "#{platform_transaction_id[0..50]}..." : platform_transaction_id,
+      from_amount.to_s('F'),
+      from_currency.symbol,
+      to_amount.to_s('F'),
+      to_currency.symbol,
+      market_value&.to_s('F'),
+      market_value_currency&.symbol,
+      fee&.to_s('F'),
+      fee_currency&.symbol,
+      completed_at ? completed_at.strftime('%Y-%m-%d %H:%M:%S') : '',
+      processed
+    ]
+  end
+
   private
 
   def process_acquisition!
     return if type == 'exchange' && market_value.nil?
 
-    if from_currency.crypto? # exchange
+    if from_currency.crypto? # exchange / interest / reward etc.
       cost_currency = market_value_currency
       cost_amount = market_value
       # add fee to cost
@@ -182,11 +258,13 @@ class Transaction < Sequel::Model
       if disposed_amount >= asset.amount
         amount = asset.amount
         cost_amount = asset.cost_amount
+        account_cost_amount = asset.account_cost_amount
         disposed_amount -= amount
       else
         # partial disposal
         amount = disposed_amount.abs
         cost_amount = amount * asset.average_cost_amount
+        account_cost_amount = amount * asset.account_average_cost_amount
       end
 
       sold_amount = fiat_price * amount
@@ -200,14 +278,71 @@ class Transaction < Sequel::Model
         amount:,
         cost_amount:,
         sold_amount:,
+        account_cost_amount:,
         type:,
         acquisition: asset.acquisition,
+        account_acquired_at: asset.account_acquired_at,
         disposed_at: completed_at
       )
       asset.update(
         amount: asset.amount - amount,
-        cost_amount: asset.cost_amount - cost_amount
+        cost_amount: asset.cost_amount - cost_amount,
+        account_cost_amount: asset.account_cost_amount - account_cost_amount
       )
     end
+  end
+
+  def process_transfer_out!
+    raise "#{type} is not a 'transfer_out'" unless type == 'transfer_out'
+
+    @transfer = Transfer.find(from_account: account, from_transaction: self)
+    return @transfer if @transfer
+
+    matching_transactions = matching_transfer_in.all
+    raise "No matching 'transfer_in' transactions found" if matching_transactions.empty?
+    raise "Too many matching 'transfer_in' matching transactions found: #{matching_transactions.size}" if matching_transactions.size > 1
+
+    to_transaction = matching_transactions.first
+
+    @transfer = Transfer.create(
+      portfolio:,
+      from_account: account,
+      to_account: to_transaction.account,
+      currency: to_currency,
+      amount: to_amount.abs + (fee || 0), # to_amount & fee are negative
+      from_transaction: self,
+      to_transaction:,
+      fiat_currency: to_transaction.market_value_currency,
+      account_cost_amount: to_transaction.market_value,
+      from_completed_at: completed_at,
+      to_completed_at: to_transaction.completed_at
+    )
+  end
+
+  def process_transfer_in!
+    raise "#{type} is not a 'transfer_in'" unless type == 'transfer_in'
+
+    @transfer = Transfer.find(to_account: account, to_transaction: self)
+    return @transfer if @transfer
+
+    matching_transactions = matching_transfer_out.all
+    raise "No matching 'transfer_out' transactions found" if matching_transactions.empty?
+    raise "Too many matching 'transfer_out' matching transactions found: #{matching_transactions.size}" if matching_transactions.size > 1
+
+    from_transaction = matching_transactions.first
+
+    @transfer = Transfer.create(
+      portfolio:,
+      from_account: from_transaction.account,
+      to_account: account,
+      currency: to_currency,
+      amount: to_amount, # to_amount positive & no fee
+      from_transaction:,
+      to_transaction: self,
+      fiat_currency: market_value_currency,
+      account_cost_amount: market_value,
+      from_completed_at: from_transaction.completed_at,
+      to_completed_at: completed_at
+    )
   end
 end

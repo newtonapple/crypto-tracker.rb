@@ -21,11 +21,15 @@
 #  accounts_platform_id_fkey  | (platform_id) REFERENCES platforms(id)
 #  accounts_portfolio_id_fkey | (portfolio_id) REFERENCES portfolios(id)
 # Referenced By:
-#  account_wallets | account_wallets_account_id_fkey | (account_id) REFERENCES accounts(id)
-#  acquisitions    | acquisitions_account_id_fkey    | (account_id) REFERENCES accounts(id)
-#  assets          | assets_account_id_fkey          | (account_id) REFERENCES accounts(id)
-#  disposals       | disposals_account_id_fkey       | (account_id) REFERENCES accounts(id)
-#  transactions    | transactions_account_id_fkey    | (account_id) REFERENCES accounts(id)
+#  account_wallets    | account_wallets_account_id_fkey         | (account_id) REFERENCES accounts(id)
+#  acquisitions       | acquisitions_account_id_fkey            | (account_id) REFERENCES accounts(id)
+#  assets             | assets_account_id_fkey                  | (account_id) REFERENCES accounts(id)
+#  disposals          | disposals_account_id_fkey               | (account_id) REFERENCES accounts(id)
+#  transactions       | transactions_account_id_fkey            | (account_id) REFERENCES accounts(id)
+#  transferred_assets | transferred_assets_from_account_id_fkey | (from_account_id) REFERENCES accounts(id)
+#  transferred_assets | transferred_assets_to_account_id_fkey   | (to_account_id) REFERENCES accounts(id)
+#  transfers          | transfers_from_account_id_fkey          | (from_account_id) REFERENCES accounts(id)
+#  transfers          | transfers_to_account_id_fkey            | (to_account_id) REFERENCES accounts(id)
 
 class Account < Sequel::Model
   many_to_one :portfolio
@@ -58,6 +62,8 @@ class Account < Sequel::Model
   end
 
   def delete_accounting_data!
+    delete_transferred_assets!
+    delete_transfers!
     delete_disposals!
     delete_assets!
     delete_acquisitions!
@@ -76,5 +82,15 @@ class Account < Sequel::Model
   def delete_acquisitions!
     DB[:acquisitions].where(account_id: id).delete
     associations.delete(:acquisitions)
+  end
+
+  def delete_transfers!
+    DB[:transfers].where(from_account_id: id).delete
+    DB[:transfers].where(to_account_id: id).delete
+  end
+
+  def delete_transferred_assets!
+    DB[:transferred_assets].where(from_account_id: id).delete
+    DB[:transferred_assets].where(to_account_id: id).delete
   end
 end

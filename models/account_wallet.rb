@@ -13,6 +13,9 @@
 # Foreign key constraints:
 #  account_wallets_account_id_fkey | (account_id) REFERENCES accounts(id)
 #  account_wallets_wallet_id_fkey  | (wallet_id) REFERENCES wallets(id)
+# Referenced By:
+#  transactions | transactions_from_wallet_id_fkey | (from_wallet_id) REFERENCES account_wallets(id)
+#  transactions | transactions_to_wallet_id_fkey   | (to_wallet_id) REFERENCES account_wallets(id)
 
 class AccountWallet < Sequel::Model
   many_to_one :account

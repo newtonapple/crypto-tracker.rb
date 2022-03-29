@@ -66,6 +66,7 @@ module Importers
       crypto_currency, amount, fiat_amount = parse_row(row)
       transaction.to_currency = transaction.from_currency = crypto_currency
       transaction.to_amount = transaction.from_amount = amount
+      transaction.market_value_currency = fiat_currency
       transaction.market_value = fiat_amount
     end
 

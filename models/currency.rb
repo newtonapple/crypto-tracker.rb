@@ -15,13 +15,21 @@
 #  currencies_name_index           | btree (name)
 #  currencies_updated_at_index     | btree (updated_at)
 # Referenced By:
-#  acquisitions | acquisitions_cost_currency_id_fkey | (cost_currency_id) REFERENCES currencies(id)
-#  acquisitions | acquisitions_currency_id_fkey      | (currency_id) REFERENCES currencies(id)
-#  assets       | assets_cost_currency_id_fkey       | (cost_currency_id) REFERENCES currencies(id)
-#  assets       | assets_currency_id_fkey            | (currency_id) REFERENCES currencies(id)
-#  disposals    | disposals_currency_id_fkey         | (currency_id) REFERENCES currencies(id)
-#  disposals    | disposals_fiat_currency_id_fkey    | (fiat_currency_id) REFERENCES currencies(id)
-#  wallets      | wallets_currency_id_fkey           | (currency_id) REFERENCES currencies(id)
+#  acquisitions       | acquisitions_cost_currency_id_fkey         | (cost_currency_id) REFERENCES currencies(id)
+#  acquisitions       | acquisitions_currency_id_fkey              | (currency_id) REFERENCES currencies(id)
+#  assets             | assets_cost_currency_id_fkey               | (cost_currency_id) REFERENCES currencies(id)
+#  assets             | assets_currency_id_fkey                    | (currency_id) REFERENCES currencies(id)
+#  disposals          | disposals_currency_id_fkey                 | (currency_id) REFERENCES currencies(id)
+#  disposals          | disposals_fiat_currency_id_fkey            | (fiat_currency_id) REFERENCES currencies(id)
+#  transactions       | transactions_fee_currency_id_fkey          | (fee_currency_id) REFERENCES currencies(id)
+#  transactions       | transactions_from_currency_id_fkey         | (from_currency_id) REFERENCES currencies(id)
+#  transactions       | transactions_market_value_currency_id_fkey | (market_value_currency_id) REFERENCES currencies(id)
+#  transactions       | transactions_to_currency_id_fkey           | (to_currency_id) REFERENCES currencies(id)
+#  transferred_assets | transferred_assets_cost_currency_id_fkey   | (cost_currency_id) REFERENCES currencies(id)
+#  transferred_assets | transferred_assets_currency_id_fkey        | (currency_id) REFERENCES currencies(id)
+#  transfers          | transfers_currency_id_fkey                 | (currency_id) REFERENCES currencies(id)
+#  transfers          | transfers_fiat_currency_id_fkey            | (fiat_currency_id) REFERENCES currencies(id)
+#  wallets            | wallets_currency_id_fkey                   | (currency_id) REFERENCES currencies(id)
 
 class Currency < Sequel::Model
   plugin :static_cache

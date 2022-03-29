@@ -17,7 +17,7 @@ task :test_up do
   migrate.call('test', nil)
 end
 
-desc 'Migrate test database all the way down'
+desc 'Migrate test database down to VERSION (keeping VERSION)'
 task :test_down do
   migrate.call('test', 0)
 end
@@ -33,7 +33,7 @@ task :dev_up do
   migrate.call('development', nil)
 end
 
-desc 'Migrate development database to all the way down'
+desc 'Migrate development database down to VERSION (keeping VERSION)'
 task :dev_down do
   migrate.call('development', ENV['VERSION'].to_i)
 end
