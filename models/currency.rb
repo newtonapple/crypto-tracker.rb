@@ -38,6 +38,15 @@ class Currency < Sequel::Model
     h[c.symbol] << c
   end.freeze
 
+  def self.by_symbols(symbols)
+    currencies = []
+    symbols.each do |s|
+      currency = by_symbol(s)
+      currencies << currency if currency
+    end
+    currencies
+  end
+
   def self.by_symbol(symbol, name: nil, type: nil)
     currencies = BY_SYMBOL[symbol]
     return currencies.first if currencies.size == 1

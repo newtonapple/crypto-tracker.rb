@@ -30,6 +30,19 @@ class Portfolio < Sequel::Model
   one_to_many :transfers
   one_to_many :transferred_assets
 
+  def transactions_for(from_crypto: [], to_crypto: [], account: [], type: [])
+    from_currency = Currency.by_symbols(from_crypto)
+    to_currency = Currency.by_symbols(to_crypto)
+    account = Account.where(name: account).all if account.any?
+    transactions do |ds|
+      ds = ds.where(from_currency:) if from_currency.any?
+      ds = ds.where(to_currency:) if to_currency.any?
+      ds = ds.where(account:) if account.any?
+      ds = ds.where(type:) if type.any?
+      ds.eager(:account).order(:completed_at)
+    end
+  end
+
   def acquisitions
     Acquisition.where(account: accounts).eager(:account).order(:acquired_at)
   end
