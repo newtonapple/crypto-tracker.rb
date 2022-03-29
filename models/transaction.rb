@@ -121,8 +121,10 @@ class Transaction < Sequel::Model
       update(processed: true)
     when 'transfer_out'
       process_transfer_out!
+      update(processed: true)
     when 'transfer_in'
       process_transfer_in!
+      update(processed: true)
     end
   end
 
