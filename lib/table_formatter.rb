@@ -3,13 +3,12 @@
 require 'tty/table'
 
 module TableFormatter
+  def print_table(rows, format: :unicode, header: self::TABLE_HEADERS, alignments: self::TABLE_ALIGNMENTS, &block)
+    puts render_table(rows, format:, header:, alignments:, &block)
+  end
+
   def render_table(rows, format: :unicode, header: self::TABLE_HEADERS, alignments: self::TABLE_ALIGNMENTS, &block)
-    if block
-      tb = table(rows, header:, &block)
-      tb.render(format, alignments:)
-    else
-      table(rows, header:).render(format, alignments:)
-    end
+    table(rows, header:, &block).render(format, alignments:)
   end
 
   def table(rows, header: self::TABLE_HEADERS)
