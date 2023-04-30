@@ -11,7 +11,7 @@ module Importers
     DISPOSED_ASSET  = 'Asset Disposed (Sold, Sent, etc)'
     ACQUIRED_AMOUNT = 'Quantity Acquired (Bought, Received, etc)'
     DISPOSED_AMOUNT = 'Quantity Disposed'
-    COST            = 'Cost Basis (incl. fees paid) (USD)'
+    COST            = 'Cost Basis (incl. fees and/or spread) (USD)'
     PROCEEDS        = 'Proceeds (excl. fees paid) (USD)'
     TRADE_ID        = 'Transaction ID'
     TYPE            = 'Transaction Type'
@@ -27,11 +27,13 @@ module Importers
 
     def parse!(report)
       CSV.parse(report, headers: true).each do |row|
-        next unless row[SOURCE] == 'Coinbase'
-
         case row[TYPE]
-        when 'Reward'
+        when 'Deposit'
+          parse_transaction!(row, 'transfer_in')
+        when 'Reward', 'Rewards'
           parse_reward!(row)
+        # when 'Stake'
+        #   we ignore stake for now as cryptos are still in our account
         end
       end
       transactions
@@ -39,13 +41,19 @@ module Importers
 
     private
 
+
     def parse_reward!(row)
-      transaction = init_transaction(row)
-      transaction.type = 'reward'
-      transaction.from_currency = transaction.to_currency = Currency.by_symbol(row[ACQUIRED_ASSET])
-      transaction.from_amount = transaction.to_amount = BigDecimal(row[ACQUIRED_AMOUNT])
+      transaction = parse_transaction!(row, 'reward')
       transaction.market_value_currency = fiat_currency
       transaction.market_value = BigDecimal(row[COST])
+    end
+
+    def parse_transaction!(row, type)
+      transaction = init_transaction(row)
+      transaction.type = type
+      transaction.from_currency = transaction.to_currency = Currency.by_symbol(row[ACQUIRED_ASSET])
+      transaction.from_amount = transaction.to_amount = BigDecimal(row[ACQUIRED_AMOUNT])
+      transaction
     end
 
     def init_transaction(row)

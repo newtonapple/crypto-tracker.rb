@@ -28,6 +28,7 @@ module Importers
         text = pdf.pages.map(&:text).join("\n").squeeze("\n")
 
         scanner = StringScanner.new(text)
+        scanner.skip_until(/BlockFi Interest Account Statement/) # only pickup interest pricing, ignore wallet
         scanner.skip_until(/Month Ending\s+/)
         date = Date.parse(scanner.scan_until(/\n/).strip)
         pricing = {}
@@ -56,6 +57,7 @@ module Importers
       @account = account
       @fiat_currency = fiat_currency
       @trade_transactions = {}
+      @withdraw_transactions = {}
       @monthly_prices = monthly_prices
       @transactions = []
     end
@@ -85,7 +87,7 @@ module Importers
       # Credit Card Trading Rebate
       # Credit Card Referral Bonus
       # Credit Card Stablecoin Boost
-      csv = CSV.parse(report, headers: true).sort_by { |r| r[TIME] || '' }
+      csv = CSV.parse(report, headers: true).sort_by { |r| [r[TIME] || '', r[TYPE]] } # TYPE is used to sort withdrawal before withdrawal fee
       csv.each do |row|
         next unless row[TIME]
 
@@ -105,7 +107,11 @@ module Importers
         when 'Crypto Transfer'
           parse_crypto_transaction!(row, 'transfer_in')
         when 'Withdrawal'
-          parse_crypto_transaction!(row, 'transfer_out')
+          # "BIA Withdraw" is just a transfer from interest account to wallet
+          # The amount of cryptos with have on Blockfi remains the same
+          parse_withdraw!(row)
+        when 'Withdrawal Fee'
+          parse_crypto_withdraw_fee!(row)
         end
       end
       transactions
@@ -136,6 +142,14 @@ module Importers
       transaction.to_amount = amount.abs
     end
 
+    def parse_withdraw!(row)
+      transaction = parse_crypto_transaction!(row, 'transfer_out')
+      completed_at = transaction.completed_at.to_i
+      raise "Withdrawal already exist for #{row[CURRENCY]} at #{row[TIME]}" if @withdraw_transactions[completed_at]
+
+      @withdraw_transactions[completed_at] = transaction
+    end
+
     def parse_crypto_transaction!(row, type)
       transaction = init_transaction(row)
       currency = Currency.by_symbol(row[CURRENCY])
@@ -149,6 +163,19 @@ module Importers
       transaction.type = type
       infer_market_value_from_monthly_pricing(transaction)
       infer_market_value(transaction)
+      transaction
+    end
+
+    def parse_crypto_withdraw_fee!(row)
+      completed_at = Time.parse(row[TIME]).to_i
+      transaction = @withdraw_transactions[completed_at]
+      raise "Transaction missing for withdrawal fee #{row[AMOUNT]} #{row[CURRENCY]} at #{row[TIME]}" unless transaction
+
+      currency = Currency.by_symbol(row[CURRENCY])
+      amount = BigDecimal(row[AMOUNT])
+      transaction.fee_currency = currency
+      transaction.fee = amount
+      transaction.to_amount = transaction.from_amount = transaction.from_amount + amount # amount is already negative
     end
 
     # each trade contains 2 rows in the CSV

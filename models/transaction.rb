@@ -67,7 +67,7 @@ class Transaction < Sequel::Model
   TABLE_ALIGNMENTS = %i[right left right right left right left right left right left right left left center].freeze
   extend TableFormatter
 
-  MAX_TRANSFER_DELTA_SECS = 60 * 60 * 24 # +/- 1 day
+  MAX_TRANSFER_DELTA_SECS = 60 * 60 * 24 * 3 # +/- 3 days
 
   class << self
     # transaton must be of type 'transfer_out'
@@ -205,6 +205,7 @@ class Transaction < Sequel::Model
 
   def process_acquisition!
     return if type == 'exchange' && market_value.nil?
+    return if from_amount.zero?
 
     if from_currency.crypto? # exchange / interest / reward etc.
       cost_currency = market_value_currency
@@ -301,7 +302,7 @@ class Transaction < Sequel::Model
     return @transfer if @transfer
 
     matching_transactions = matching_transfer_in.all
-    raise "No matching 'transfer_in' transactions found" if matching_transactions.empty?
+    raise "No matching 'transfer_in' transactions found for #{account.name} transaction #{id}: #{to_currency.name} #{to_amount} @ #{completed_at}" if matching_transactions.empty?
     raise "Too many matching 'transfer_in' matching transactions found: #{matching_transactions.size}" if matching_transactions.size > 1
 
     to_transaction = matching_transactions.first
