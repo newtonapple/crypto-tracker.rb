@@ -13,6 +13,8 @@ Sequel.migration do
         loss_investment
         loss_theft
         loss_casualty
+        loss_bankruptcy
+        loss_bankruptcy_liquidation
       ]
     )
 

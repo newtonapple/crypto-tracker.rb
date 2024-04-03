@@ -77,6 +77,11 @@ class Asset < Sequel::Model
       end
     end
 
+    def disposable_amount(account:, currency:, disposed_at:)
+      asset = disposable(account.id, currency.id, disposed_at).select_group(:account_id, :currency_id).select_append { sum(:amount).as(:amount) }.first
+      asset ? asset.amount : 0
+    end
+
     def disposable(account_id, currency_id, disposed_at)
       where(account_id:, currency_id:).where do
         (Sequel[:amount] > 0) & (acquired_at <= disposed_at) # rubocop:disable Style/NumericPredicate

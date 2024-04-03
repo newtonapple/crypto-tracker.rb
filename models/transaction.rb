@@ -119,6 +119,9 @@ class Transaction < Sequel::Model
       process_disposal!
       process_acquisition!
       update(processed: true)
+    when 'loss_bankruptcy_liquidation'
+      process_loss_bankruptcy_liquidation!
+      update(processed: true)
     when 'transfer_out'
       process_transfer_out!
       update(processed: true)
@@ -230,8 +233,29 @@ class Transaction < Sequel::Model
     )
   end
 
-  def process_disposal!
-    disposed_amount = from_amount.abs # crypto
+  # from_amount is the original (crypto) currency amount reclaimed
+  # to_amount is the amount of to_currency got back (.e.g USD or USDC for in-kind returns)
+  def process_loss_bankruptcy_liquidation!
+    total_amount = Asset.disposable_amount(account:, currency: from_currency, disposed_at: completed_at)
+    process_disposal!(total_amount) # claim loss on all from_currency assets
+    return unless to_currency.crypto?
+
+    # in-kind returns in crypto
+    # assumes no fees here, so cost_amount == market_value
+    Acquisition.create(
+      transaction: self,
+      account:,
+      currency: to_currency,
+      amount: to_amount,
+      cost_currency: market_value_currency,
+      cost_amount: market_value,
+      type: 'exchange',
+      acquired_at: completed_at
+    )
+  end
+
+  def process_disposal!(disposed_amount = from_amount.abs)
+    # disposed_amount / from_amount is crypto
     if to_currency.crypto?
       # "exchange" type
       #   to_amount is crypto
@@ -302,7 +326,9 @@ class Transaction < Sequel::Model
     return @transfer if @transfer
 
     matching_transactions = matching_transfer_in.all
-    raise "No matching 'transfer_in' transactions found for #{account.name} transaction #{id}: #{to_currency.name} #{to_amount} @ #{completed_at}" if matching_transactions.empty?
+    if matching_transactions.empty?
+      raise "No matching 'transfer_in' transactions found for #{account.name} transaction #{id}: #{to_currency.name} #{to_amount} @ #{completed_at}"
+    end
     raise "Too many matching 'transfer_in' matching transactions found: #{matching_transactions.size}" if matching_transactions.size > 1
 
     to_transaction = matching_transactions.first

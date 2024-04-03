@@ -7,13 +7,15 @@ module Importers
   # Importer for Voyager Tax/Transactions CSV from https://research.investvoyager.com/tax/
   # (default Voyager format)
   class VoyagerCustom
-    TIME      = 'transaction_date'
-    AMOUNT    = 'quantity'
-    CURRENCY  = 'base_asset'
-    PRICE     = 'price'
-    TRADE_ID  = 'transaction_id'
-    TYPE      = 'transaction_type'
-    DIRECTION = 'transaction_direction'
+    TIME        = 'transaction_date'
+    AMOUNT      = 'quantity'
+    TO_AMOUNT   = 'net_amount'
+    CURRENCY    = 'base_asset'
+    TO_CURRENCY = 'quote_asset'
+    PRICE       = 'price'
+    TRADE_ID    = 'transaction_id'
+    TYPE        = 'transaction_type'
+    DIRECTION   = 'transaction_direction'
 
     attr_reader :account, :fiat_currency, :transactions
 
@@ -25,6 +27,7 @@ module Importers
 
     def parse!(report)
       CSV.parse(report, headers: true).sort_by { |r| r[TIME] }.each do |row|
+        print row
         case row[TYPE]
         when 'TRADE', 'Fiat Buy', 'Fiat Sell'
           parse_trade!(row)
@@ -38,6 +41,8 @@ module Importers
           parse_withdraw!(row)
         when 'Withdrawal Fee'
           parse_withdraw_fee!(row)
+        when 'Bankruptcy Liquidation'
+          parse_liquidation!(row)
         end
       end
       transactions
@@ -107,13 +112,27 @@ module Importers
       transfer = init_transaction(row)
       fee_currency, amount, = parse_row(row) # don't care about quote fiat_price
 
-      raise "withdraw fee currency mismatched: from_currency: #{transfer.from_currency}, to_currency: #{transfer.to_currency}" if transfer.from_currency != fee_currency
+      if transfer.from_currency != fee_currency
+        raise "withdraw fee currency mismatched: from_currency: #{transfer.from_currency}, to_currency: #{transfer.to_currency}"
+      end
 
       transfer.fee_currency = fee_currency
       transfer.fee = amount # amount is already negative
 
       # transferrred amount already had fee taken out of it, so we have to add it back into the amount in order to match our internal format
       transfer.to_amount = transfer.from_amount = transfer.from_amount + amount
+    end
+
+    def parse_liquidation!(row)
+      transaction = init_transaction(row)
+      crypto_currency, amount, = parse_row(row) # recovered amount; don't care about quote fiat_price
+      transaction.type = 'loss_bankruptcy_liquidation'
+      transaction.from_currency = crypto_currency
+      transaction.to_currency = Currency.by_symbol(row[TO_CURRENCY])
+      transaction.from_amount = amount
+      transaction.to_amount = BigDecimal(row[TO_AMOUNT]) # either USDC (in-kind exchange) or USD (liquidation)
+      transaction.market_value_currency = fiat_currency
+      transaction.market_value = transaction.to_amount # USDC == USD, so market value (in fiat currency) can be treated the same
     end
 
     def parse_row(row)

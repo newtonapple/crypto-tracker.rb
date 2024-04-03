@@ -1,4 +1,3 @@
-
 # frozen_string_literal: true
 
 require 'csv'
@@ -28,19 +27,22 @@ module Importers
     def parse!(report)
       CSV.parse(report, headers: true).each do |row|
         case row[TYPE]
-        when 'Deposit'
+        when 'Deposit' # internal transfer from Coinbase Pro
+          parse_transaction!(row, 'transfer_in')
+        when 'Receive' # transfer external source
           parse_transaction!(row, 'transfer_in')
         when 'Reward', 'Rewards'
           parse_reward!(row)
-        # when 'Stake'
-        #   we ignore stake for now as cryptos are still in our account
+          # when 'Stake' # e.g. ADA
+          #   we ignore stake for now as cryptos are still in our account
+          #  when 'Untake' # e.g. ADA
+          #   we ignore unstake for now as cryptos are still in our account
         end
       end
       transactions
     end
 
     private
-
 
     def parse_reward!(row)
       transaction = parse_transaction!(row, 'reward')
