@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require 'pp'
 require 'oj'
 require_relative 'init'
 Sequel::Model.plugin :update_or_create

@@ -33,13 +33,13 @@ Metrics/MethodLength:
   StyleGuide: '<https://github.com/bbatsov/ruby-style-guide#short-methods>'
   Max: 50
   Enabled: true
-  IgnoredMethods:
+  AllowedMethods:
     - table_row
 
 Metrics/BlockLength:
   CountComments: false
   Max: 10
-  IgnoredMethods:
+  AllowedMethods:
     - Sequel.migration
     - create_table
     - change
@@ -50,13 +50,13 @@ Metrics/BlockLength:
     - it
 
 Metrics/AbcSize:
-  IgnoredMethods:
+  AllowedMethods:
     - table_row
 
 Metrics/CyclomaticComplexity:
-  IgnoredMethods:
+  AllowedMethods:
     - table_row
 
 Metrics/PerceivedComplexity:
-  IgnoredMethods:
+  AllowedMethods:
     - table_row

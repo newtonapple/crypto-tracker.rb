@@ -7,9 +7,9 @@ module CoinbaseExchange
   class Signature
     def self.from_env
       new(
-        key: ENV['COINBASEPRO_API_KEY'],
-        secret: ENV['COINBASEPRO_API_SECRET'],
-        passphrase: ENV['COINBASEPRO_API_PASSPHRASE']
+        key: ENV.fetch('COINBASEPRO_API_KEY', nil),
+        secret: ENV.fetch('COINBASEPRO_API_SECRET', nil),
+        passphrase: ENV.fetch('COINBASEPRO_API_PASSPHRASE', nil)
       )
     end
 

@@ -53,7 +53,6 @@ class Transfer < Sequel::Model
 
   one_to_many :transferred_assets
 
-
   TABLE_HEADERS = [
     ' ', 'from',
     ' ', 'to',
